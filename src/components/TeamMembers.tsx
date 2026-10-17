@@ -664,6 +664,7 @@ https://hacktivators.org`;
             </div>
           </div>
         </div>
+        )}
       {/* Step 3: Delete User Confirmation Modal */}
       {memberToDelete && (
         <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4">
