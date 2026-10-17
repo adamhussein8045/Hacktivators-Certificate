@@ -188,7 +188,7 @@ export default function App() {
       id: `audit-${Date.now()}`,
       orgId: currentOrgId,
       actorName: 'Adam Hussein',
-      actorEmail: 'hacktivators5@gmail.com',
+      actorEmail: 'adamhussein8045@gmail.com',
       actorRole: currentRole,
       action: 'MEMBER_INVITED',
       targetId: newMember.email,

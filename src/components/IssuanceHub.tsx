@@ -56,9 +56,9 @@ export const IssuanceHub: React.FC<IssuanceHubProps> = ({
     templates.find((tpl) => tpl.id === selectedTemplateId) || templates[0];
 
   // Individual Form State
-  const [recipientName, setRecipientName] = useState('Sarah Mansour');
-  const [recipientNameAr, setRecipientNameAr] = useState('سارة المنصور');
-  const [recipientEmail, setRecipientEmail] = useState('sarah.m@example.com');
+  const [recipientName, setRecipientName] = useState('Adam Hussein');
+  const [recipientNameAr, setRecipientNameAr] = useState('ادم حسين');
+  const [recipientEmail, setRecipientEmail] = useState('example@gmail.com');
   const [certTitle, setCertTitle] = useState('Certificate of Distinguished Excellence');
   const [certDescription, setCertDescription] = useState(
     'In recognition of exceptional contributions, innovative problem-solving, and exemplary leadership in software engineering.'
@@ -266,7 +266,7 @@ export const IssuanceHub: React.FC<IssuanceHubProps> = ({
       id: `audit-${Date.now()}`,
       orgId: currentOrgId,
       actorName: 'Adam Hussein',
-      actorEmail: 'hacktivators5@gmail.com',
+      actorEmail: 'adamhussein8045@gmail.com',
       actorRole: currentRole,
       action: 'BATCH_CSV_ISSUED',
       targetId: `BATCH-${Date.now()}`,
