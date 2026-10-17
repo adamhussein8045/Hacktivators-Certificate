@@ -116,7 +116,7 @@ ${inviteLink}
 مع فائق التقدير،
 إدارة العمليات والتحقق الرقمي
 فريق هاكتيفيتورز - Hacktivators Team
-https://hacktivators.org`
+Innovation Technology Impact`
       : `Official Credential Access Authorization - Hacktivators Certificates
 
 Dear ${name},
