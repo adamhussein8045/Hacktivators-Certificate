@@ -25,7 +25,7 @@ export const initialUsers: User[] = [
   {
     id: 'usr-adam',
     name: 'Adam Hussein',
-    email: 'adamhussein8045@gmail.com',
+    email: 'hacktivators5@gmail.com',
     role: 'platform_owner',
     orgId: 'org-hacktivators',
   },
@@ -630,7 +630,7 @@ export const initialAuditLogs: AuditLogEntry[] = [
     id: 'audit-001',
     orgId: 'org-hacktivators',
     actorName: 'Adam Hussein',
-    actorEmail: 'adamhussein8045@gmail.com',
+    actorEmail: 'hacktivators5@gmail.com',
     actorRole: 'platform_owner',
     action: 'TEMPLATE_CREATED',
     targetId: 'tpl-hackathon-gold',

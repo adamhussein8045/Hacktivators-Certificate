@@ -85,7 +85,7 @@ export const CertificatesRegistry: React.FC<CertificatesRegistryProps> = ({
       id: `audit-${Date.now()}`,
       orgId: currentOrg.id,
       actorName: 'Adam Hussein',
-      actorEmail: 'adamhussein8045@gmail.com',
+      actorEmail: 'hacktivators5@gmail.com',
       actorRole: userRole,
       action: 'CERTIFICATE_REVOKED',
       targetId: activeRevokeCert.id,

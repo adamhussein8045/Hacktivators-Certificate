@@ -141,7 +141,7 @@ If you did not request or anticipate this authorization, please contact platform
 Sincerely,
 Credential Directorate & Security Operations
 Hacktivators Team
-https://hacktivators.org`;
+Innovation Technology Impact`;
 
     const gmailUrl = `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(
       email.trim()
