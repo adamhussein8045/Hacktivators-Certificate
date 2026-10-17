@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useLayoutEffect } from 'react';
 import {
   CertificateTemplate,
   CertificateElement,
@@ -67,12 +67,51 @@ export const Designer: React.FC<DesignerProps> = ({
   const [selectedElementId, setSelectedElementId] = useState<string | null>(
     activeTemplate.elements[0]?.id || null
   );
-  const [zoomScale, setZoomScale] = useState<number>(0.72);
+  // Zoom is a multiplier on top of the auto "fit to container" scale (1 = fit).
+  const [zoomScale, setZoomScale] = useState<number>(1);
+  const [fitScale, setFitScale] = useState<number>(0.5);
   const [previewLanguage, setPreviewLanguage] = useState<Language>(lang);
   const [isExporting, setIsExporting] = useState<'pdf' | 'png' | null>(null);
   const [saveSuccessMsg, setSaveSuccessMsg] = useState(false);
 
   const printRef = useRef<HTMLDivElement>(null);
+  const canvasContainerRef = useRef<HTMLDivElement>(null);
+
+  const isLandscape = activeTemplate.orientation === 'landscape';
+  const baseWidth = isLandscape ? 1123 : 794;
+  const baseHeight = isLandscape ? 794 : 1123;
+
+  useLayoutEffect(() => {
+    const container = canvasContainerRef.current;
+    if (!container) return;
+
+    const recalculate = () => {
+      const styles = window.getComputedStyle(container);
+      const availableWidth =
+        container.clientWidth -
+        parseFloat(styles.paddingLeft) -
+        parseFloat(styles.paddingRight);
+      const availableHeight =
+        container.clientHeight -
+        parseFloat(styles.paddingTop) -
+        parseFloat(styles.paddingBottom);
+      if (availableWidth <= 0 || availableHeight <= 0) return;
+      const next = Math.min(availableWidth / baseWidth, availableHeight / baseHeight);
+      setFitScale(Math.max(0.05, Number(next.toFixed(4))));
+    };
+
+    recalculate();
+    const observer = new ResizeObserver(recalculate);
+    observer.observe(container);
+    window.addEventListener('resize', recalculate);
+    return () => {
+      observer.disconnect();
+      window.removeEventListener('resize', recalculate);
+    };
+  }, [baseWidth, baseHeight]);
+
+  const effectiveScale = fitScale * zoomScale;
+  const isZoomedBeyondFit = zoomScale > 1;
 
   const selectedElement = activeTemplate.elements.find(
     (el) => el.id === selectedElementId
@@ -349,8 +388,8 @@ export const Designer: React.FC<DesignerProps> = ({
   return (
     <div className="flex flex-col h-[calc(100vh-3.25rem)] bg-white text-neutral-900">
       {/* Top Studio Action Bar */}
-      <div className="flex flex-wrap items-center justify-between gap-4 px-6 py-2.5 border-b border-neutral-200 bg-white z-20">
-        <div className="flex items-center gap-3">
+      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 px-3 sm:px-6 py-2.5 border-b border-neutral-200 bg-white z-20 shrink-0">
+        <div className="flex flex-wrap items-center gap-3">
           <div className="flex items-center gap-2 text-xs">
             <span className="text-neutral-500 font-medium">{t.common.org}:</span>
             <span className="font-semibold text-neutral-900">
@@ -413,21 +452,31 @@ export const Designer: React.FC<DesignerProps> = ({
           {/* Zoom controls */}
           <div className="flex items-center gap-1 bg-white px-2 py-1 rounded border border-neutral-200 text-xs text-neutral-700">
             <button
-              onClick={() => setZoomScale((z) => Math.max(0.4, Number((z - 0.1).toFixed(2))))}
+              onClick={() => setZoomScale((z) => Math.max(0.5, Number((z - 0.1).toFixed(2))))}
               className="p-0.5 hover:text-neutral-950"
               title="Zoom Out"
+              aria-label="Zoom out"
             >
               <ZoomOut className="w-3.5 h-3.5" />
             </button>
             <span className="w-9 text-center font-mono tabular-nums text-neutral-900 font-medium">
-              {Math.round(zoomScale * 100)}%
+              {Math.round(effectiveScale * 100)}%
             </span>
             <button
-              onClick={() => setZoomScale((z) => Math.min(1.2, Number((z + 0.1).toFixed(2))))}
+              onClick={() => setZoomScale((z) => Math.min(3, Number((z + 0.1).toFixed(2))))}
               className="p-0.5 hover:text-neutral-950"
               title="Zoom In"
+              aria-label="Zoom in"
             >
               <ZoomIn className="w-3.5 h-3.5" />
+            </button>
+            <button
+              onClick={() => setZoomScale(1)}
+              disabled={zoomScale === 1}
+              className="ml-1 px-1.5 py-0.5 rounded border border-neutral-200 text-[10px] font-semibold text-neutral-700 hover:text-neutral-950 hover:bg-neutral-50 disabled:opacity-40"
+              title="Fit certificate to preview"
+            >
+              Fit
             </button>
           </div>
         </div>
@@ -469,9 +518,9 @@ export const Designer: React.FC<DesignerProps> = ({
       </div>
 
       {/* Main Studio Workspace: Sidebar + Central Canvas */}
-      <div className="flex-1 flex overflow-hidden">
+      <div className="flex-1 min-h-0 flex flex-col md:flex-row overflow-hidden">
         {/* Left Toolbar / Element Inspector */}
-        <div className="w-80 border-r border-neutral-200 bg-white overflow-y-auto flex flex-col p-4 gap-5">
+        <div className="order-2 md:order-1 w-full md:w-72 lg:w-80 shrink-0 max-h-[45%] md:max-h-none border-t md:border-t-0 md:border-r rtl:md:border-r-0 rtl:md:border-l border-neutral-200 bg-white overflow-y-auto flex flex-col p-4 gap-5">
           {/* Page & Frame Settings */}
           <div className="space-y-3 pb-4 border-b border-neutral-200">
             <h3 className="text-xs font-bold uppercase tracking-wider text-neutral-900 flex items-center gap-2">
@@ -857,23 +906,39 @@ export const Designer: React.FC<DesignerProps> = ({
         </div>
 
         {/* Central Visual Canvas Surface */}
-        <div className="flex-1 bg-neutral-50/60 p-6 overflow-auto flex items-center justify-center relative border-neutral-200">
-          <div className="relative p-4 transition-all">
-            <CertificateRenderer
-              innerRef={printRef}
-              template={activeTemplate}
-              selectedElementId={selectedElementId}
-              onSelectElement={(id) => setSelectedElementId(id)}
-              onUpdateElementPosition={handleUpdatePosition}
-              isInteractive={true}
-              scale={zoomScale}
-              previewLang={previewLanguage}
-              certificateId="HCK-2026-STUDIO-DEMO"
-            />
+        <div className="order-1 md:order-2 flex-1 min-h-[280px] md:min-h-0 min-w-0 flex flex-col bg-neutral-50/60">
+          <div
+            ref={canvasContainerRef}
+            className={`flex-1 min-h-0 min-w-0 p-3 sm:p-6 flex ${
+              isZoomedBeyondFit ? 'overflow-auto' : 'overflow-hidden'
+            }`}
+          >
+            {/* Layout box sized to the scaled certificate so nothing is cropped */}
+            <div
+              className="relative shrink-0 m-auto"
+              style={{
+                width: `${baseWidth * effectiveScale}px`,
+                height: `${baseHeight * effectiveScale}px`,
+              }}
+            >
+              <div className="absolute top-0 left-0" dir="ltr">
+                <CertificateRenderer
+                  innerRef={printRef}
+                  template={activeTemplate}
+                  selectedElementId={selectedElementId}
+                  onSelectElement={(id) => setSelectedElementId(id)}
+                  onUpdateElementPosition={handleUpdatePosition}
+                  isInteractive={true}
+                  scale={effectiveScale}
+                  previewLang={previewLanguage}
+                  certificateId="HCK-2026-STUDIO-DEMO"
+                />
+              </div>
+            </div>
           </div>
 
-          {/* Floating Canvas Guide */}
-          <div className="absolute bottom-4 left-6 bg-white border border-neutral-200 px-3 py-1.5 rounded text-[11px] text-neutral-500 shadow-xs pointer-events-none">
+          {/* Canvas Guide */}
+          <div className="hidden sm:block shrink-0 px-6 pb-3 text-[11px] text-neutral-500">
             {t.designer.dragHint}
           </div>
         </div>

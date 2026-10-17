@@ -53,6 +53,7 @@ export const AuditLogViewer: React.FC<AuditLogViewerProps> = ({
             <option value="TEMPLATE_CREATED">TEMPLATE_CREATED</option>
             <option value="TEMPLATE_UPDATED">TEMPLATE_UPDATED</option>
             <option value="MEMBER_INVITED">MEMBER_INVITED</option>
+  <option value="MEMBER_DELETED">MEMBER_DELETED</option>
           </select>
         </div>
       </div>

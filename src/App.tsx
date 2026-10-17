@@ -203,6 +203,30 @@ export default function App() {
     StorageService.saveAuditLogs(nextAudits);
   };
 
+  const handleDeleteMember = (memberId: string) => {
+    const target = members.find((m) => m.id === memberId);
+    if (!target) {
+      throw new Error('User not found.');
+    }
+    const remaining = StorageService.deleteMember(memberId);
+    const audit: AuditLogEntry = {
+      id: `audit-${Date.now()}`,
+      orgId: target.orgId,
+      actorName: 'Adam Hussein',
+      actorEmail: 'adamhussein8045@gmail.com',
+      actorRole: currentRole,
+      action: 'MEMBER_DELETED',
+      targetId: target.email,
+      details: `User ${target.name} (${target.email}) permanently deleted from the organization`,
+      detailsAr: `حذف المستخدم ${target.name} (${target.email}) نهائياً من المؤسسة`,
+      timestamp: new Date().toISOString(),
+    };
+    const nextAudits = [audit, ...auditLogs];
+    setMembers(remaining);
+    setAuditLogs(nextAudits);
+    StorageService.saveAuditLogs(nextAudits);
+  };
+
   // Demo Dataset Controls
   const handleLoadDemoData = () => {
     const dataset = StorageService.loadDemoDataset();
@@ -466,6 +490,7 @@ export default function App() {
               currentRole={currentRole}
               members={members}
               onInviteMember={handleInviteMember}
+              onDeleteMember={handleDeleteMember}
               onSimulateRoleChange={(role) => setCurrentRole(role)}
             />
           )}
