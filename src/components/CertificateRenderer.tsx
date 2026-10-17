@@ -49,12 +49,20 @@ export const CertificateRenderer: React.FC<CertificateRendererProps> = ({
   useEffect(() => {
     if (qrCodeUrl) {
       setInternalQr(qrCodeUrl);
-    } else {
+    } else if (certificateId) {
       generateVerificationQr(certificateId).then((url) => {
         setInternalQr(url);
       });
     }
   }, [certificateId, qrCodeUrl]);
+
+  if (!template || !template.elements) {
+    return (
+      <div className="flex items-center justify-center p-12 bg-slate-900 border border-slate-800 rounded-xl text-slate-400 text-xs">
+        No certificate template available.
+      </div>
+    );
+  }
 
   const isLandscape = template.orientation === 'landscape';
   // Standard A4 aspect ratio dimensions in px (at 96 DPI: 1123 x 794 landscape)

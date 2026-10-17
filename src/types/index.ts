@@ -149,6 +149,9 @@ export interface OrgMember {
   role: UserRole;
   status: 'active' | 'invited';
   joinedAt: string;
+  inviteToken?: string;
+  inviteLink?: string;
+  invitedAt?: string;
 }
 
 export interface CsvParsedRow {

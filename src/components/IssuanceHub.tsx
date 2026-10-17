@@ -6,9 +6,9 @@ import {
   CsvParsedRow,
   AuditLogEntry,
   Language,
+  UserRole,
 } from '../types';
 import { CertificateRenderer } from './CertificateRenderer';
-import { exportElementToPdf, exportElementToPng } from '../utils/exportEngine';
 import { generateVerificationHash, generateVerificationQr } from '../utils/qrGenerator';
 import { translations } from '../i18n/translations';
 import {
@@ -19,15 +19,15 @@ import {
   AlertTriangle,
   Download,
   Copy,
-  ExternalLink,
-  Sparkles,
   ArrowRight,
   ShieldCheck,
+  Check,
 } from 'lucide-react';
 
 interface IssuanceHubProps {
   currentOrgId: string;
   lang: Language;
+  currentRole: UserRole;
   templates: CertificateTemplate[];
   existingCertificates: Certificate[];
   onCertificateIssued: (cert: Certificate, audit: AuditLogEntry) => void;
@@ -38,6 +38,7 @@ interface IssuanceHubProps {
 export const IssuanceHub: React.FC<IssuanceHubProps> = ({
   currentOrgId,
   lang,
+  currentRole,
   templates,
   existingCertificates,
   onCertificateIssued,
@@ -93,7 +94,6 @@ export const IssuanceHub: React.FC<IssuanceHubProps> = ({
   const handleIssueIndividual = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedTemplate || !recipientName || !recipientEmail) {
-      alert('Please fill in all required fields.');
       return;
     }
 
@@ -131,11 +131,11 @@ export const IssuanceHub: React.FC<IssuanceHubProps> = ({
       orgId: currentOrgId,
       actorName: 'Adam Hussein',
       actorEmail: 'adamhussein8045@gmail.com',
-      actorRole: 'platform_owner',
+      actorRole: currentRole,
       action: 'CERTIFICATE_ISSUED',
       targetId: newCertId,
-      details: `Issued individual certificate to ${recipientName} (${recipientEmail})`,
-      detailsAr: `إصدار شهادة فردية للمستلم ${recipientNameAr || recipientName}`,
+      details: `Officially conferred credential to ${recipientName} (${recipientEmail})`,
+      detailsAr: `اعتماد ومنح وثيقة رسمية للمستلم ${recipientNameAr || recipientName}`,
       timestamp: new Date().toISOString(),
     };
 
@@ -170,9 +170,7 @@ export const IssuanceHub: React.FC<IssuanceHubProps> = ({
 
         runValidation(results.data, foundName || '', foundEmail || '', foundNameAr || '');
       },
-      error: (err: any) => {
-        alert(`Failed to parse CSV file: ${err.message}`);
-      },
+      error: () => {},
     });
   };
 
@@ -233,7 +231,6 @@ export const IssuanceHub: React.FC<IssuanceHubProps> = ({
   const handleProcessBatch = async () => {
     const validRows = parsedRows.filter((r) => r.isValid);
     if (validRows.length === 0) {
-      alert('No valid rows found to issue.');
       return;
     }
 
@@ -270,11 +267,11 @@ export const IssuanceHub: React.FC<IssuanceHubProps> = ({
       orgId: currentOrgId,
       actorName: 'Adam Hussein',
       actorEmail: 'adamhussein8045@gmail.com',
-      actorRole: 'platform_owner',
+      actorRole: currentRole,
       action: 'BATCH_CSV_ISSUED',
       targetId: `BATCH-${Date.now()}`,
-      details: `Issued batch of ${newCertificates.length} certificates from CSV`,
-      detailsAr: `إصدار دفعة جماعية من ${newCertificates.length} شهادة عبر CSV`,
+      details: `Executed structured batch issuance of ${newCertificates.length} credentials from CSV`,
+      detailsAr: `تنفيذ إصدار جماعي منظم لـ ${newCertificates.length} اعتماد عبر ملف CSV`,
       timestamp: new Date().toISOString(),
     };
 
@@ -296,52 +293,57 @@ export const IssuanceHub: React.FC<IssuanceHubProps> = ({
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.setAttribute('download', 'hacktivators_recipients_sample.csv');
+    link.setAttribute('download', 'hacktivators_roster_schema.csv');
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
   };
 
   const handleCopyLink = (certId: string) => {
-    const url = `${window.location.origin}/?verify=${certId}`;
-    navigator.clipboard.writeText(url);
+    const origin = typeof window !== 'undefined' && window.location?.origin && window.location.origin !== 'null'
+      ? window.location.origin
+      : '';
+    const url = `${origin}/?verify=${certId}`;
+    if (navigator?.clipboard?.writeText) {
+      navigator.clipboard.writeText(url).catch(() => {});
+    }
     setCopiedLink(true);
     setTimeout(() => setCopiedLink(false), 2500);
   };
 
   return (
-    <div className="p-6 max-w-7xl mx-auto space-y-6">
+    <div className="p-8 max-w-7xl mx-auto space-y-6 bg-white text-neutral-900">
       {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-slate-800">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-6 border-b border-neutral-200">
         <div>
-          <h1 className="text-xl font-bold text-slate-100 flex items-center gap-2">
-            <Award className="w-5 h-5 text-indigo-400" />
+          <h1 className="text-xl font-bold tracking-tight text-neutral-950 flex items-center gap-2">
+            <Award className="w-5 h-5 text-neutral-700" />
             {t.issuance.title}
           </h1>
-          <p className="text-xs text-slate-400 mt-1">{t.issuance.subtitle}</p>
+          <p className="text-xs text-neutral-500 mt-1">{t.issuance.subtitle}</p>
         </div>
 
         {/* Tab switch */}
-        <div className="flex items-center bg-slate-800/80 p-1 rounded-lg border border-slate-700">
+        <div className="flex items-center bg-neutral-100 p-0.5 rounded border border-neutral-200">
           <button
             onClick={() => setActiveTab('individual')}
-            className={`px-4 py-1.5 text-xs font-medium rounded-md transition-colors ${
+            className={`px-3.5 py-1 text-xs font-medium rounded transition-colors ${
               activeTab === 'individual'
-                ? 'bg-indigo-600 text-white shadow-sm'
-                : 'text-slate-400 hover:text-slate-200'
+                ? 'bg-white text-neutral-950 shadow-xs font-semibold'
+                : 'text-neutral-600 hover:text-neutral-900'
             }`}
           >
             {t.issuance.individualTab}
           </button>
           <button
             onClick={() => setActiveTab('bulk')}
-            className={`px-4 py-1.5 text-xs font-medium rounded-md transition-colors flex items-center gap-1.5 ${
+            className={`px-3.5 py-1 text-xs font-medium rounded transition-colors flex items-center gap-1.5 ${
               activeTab === 'bulk'
-                ? 'bg-indigo-600 text-white shadow-sm'
-                : 'text-slate-400 hover:text-slate-200'
+                ? 'bg-white text-neutral-950 shadow-xs font-semibold'
+                : 'text-neutral-600 hover:text-neutral-900'
             }`}
           >
-            <FileSpreadsheet className="w-3.5 h-3.5" />
+            <FileSpreadsheet className="w-3.5 h-3.5 text-neutral-600" />
             {t.issuance.bulkTab}
           </button>
         </div>
@@ -351,16 +353,16 @@ export const IssuanceHub: React.FC<IssuanceHubProps> = ({
       {activeTab === 'individual' ? (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
           {/* Issuance Form */}
-          <div className="lg:col-span-5 bg-slate-900/70 border border-slate-800 rounded-xl p-5 space-y-4">
+          <div className="lg:col-span-5 bg-white border border-neutral-200 rounded p-5 space-y-4">
             {/* Template Selector */}
             <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+              <label className="block text-xs font-semibold text-neutral-800 mb-1.5">
                 {t.issuance.selectTemplate}
               </label>
               <select
                 value={selectedTemplateId}
                 onChange={(e) => setSelectedTemplateId(e.target.value)}
-                className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                className="w-full bg-white border border-neutral-200 rounded px-3 py-2 text-xs text-neutral-900 focus:outline-none focus:ring-1 focus:ring-neutral-900"
               >
                 {templates.map((tpl) => (
                   <option key={tpl.id} value={tpl.id}>
@@ -373,7 +375,7 @@ export const IssuanceHub: React.FC<IssuanceHubProps> = ({
             <form onSubmit={handleIssueIndividual} className="space-y-4">
               {/* Recipient English Name */}
               <div>
-                <label className="block text-xs font-medium text-slate-300 mb-1">
+                <label className="block text-xs font-medium text-neutral-700 mb-1">
                   {t.issuance.recipientName} *
                 </label>
                 <input
@@ -381,14 +383,14 @@ export const IssuanceHub: React.FC<IssuanceHubProps> = ({
                   required
                   value={recipientName}
                   onChange={(e) => setRecipientName(e.target.value)}
-                  placeholder="e.g. Alex Montgomery"
-                  className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-100 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                  placeholder="e.g. Alexander Montgomery"
+                  className="w-full bg-white border border-neutral-200 rounded px-3 py-2 text-xs text-neutral-900 focus:outline-none focus:ring-1 focus:ring-neutral-900"
                 />
               </div>
 
               {/* Recipient Arabic Name */}
               <div>
-                <label className="block text-xs font-medium text-slate-300 mb-1">
+                <label className="block text-xs font-medium text-neutral-700 mb-1">
                   {t.issuance.recipientNameAr}
                 </label>
                 <input
@@ -397,13 +399,13 @@ export const IssuanceHub: React.FC<IssuanceHubProps> = ({
                   value={recipientNameAr}
                   onChange={(e) => setRecipientNameAr(e.target.value)}
                   placeholder="مثال: سارة المنصور"
-                  className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-100 font-cairo focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                  className="w-full bg-white border border-neutral-200 rounded px-3 py-2 text-xs text-neutral-900 font-cairo focus:outline-none focus:ring-1 focus:ring-neutral-900"
                 />
               </div>
 
               {/* Recipient Email */}
               <div>
-                <label className="block text-xs font-medium text-slate-300 mb-1">
+                <label className="block text-xs font-medium text-neutral-700 mb-1">
                   {t.issuance.recipientEmail} *
                 </label>
                 <input
@@ -411,70 +413,70 @@ export const IssuanceHub: React.FC<IssuanceHubProps> = ({
                   required
                   value={recipientEmail}
                   onChange={(e) => setRecipientEmail(e.target.value)}
-                  placeholder="recipient@company.com"
-                  className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-100 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                  placeholder="recipient@institution.edu"
+                  className="w-full bg-white border border-neutral-200 rounded px-3 py-2 text-xs text-neutral-900 focus:outline-none focus:ring-1 focus:ring-neutral-900"
                 />
               </div>
 
               {/* Certificate Title */}
               <div>
-                <label className="block text-xs font-medium text-slate-300 mb-1">
+                <label className="block text-xs font-medium text-neutral-700 mb-1">
                   {t.issuance.certificateTitle}
                 </label>
                 <input
                   type="text"
                   value={certTitle}
                   onChange={(e) => setCertTitle(e.target.value)}
-                  className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-100 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                  className="w-full bg-white border border-neutral-200 rounded px-3 py-2 text-xs text-neutral-900 focus:outline-none focus:ring-1 focus:ring-neutral-900"
                 />
               </div>
 
               {/* Achievement Description */}
               <div>
-                <label className="block text-xs font-medium text-slate-300 mb-1">
+                <label className="block text-xs font-medium text-neutral-700 mb-1">
                   {t.issuance.description}
                 </label>
                 <textarea
                   rows={3}
                   value={certDescription}
                   onChange={(e) => setCertDescription(e.target.value)}
-                  className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-100 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                  className="w-full bg-white border border-neutral-200 rounded px-3 py-2 text-xs text-neutral-900 focus:outline-none focus:ring-1 focus:ring-neutral-900"
                 />
               </div>
 
               {/* Signatory Details & Date */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-[11px] text-slate-400 mb-1">
+                  <label className="block text-[11px] text-neutral-500 mb-1">
                     {t.issuance.issuerName}
                   </label>
                   <input
                     type="text"
                     value={issuerName}
                     onChange={(e) => setIssuerName(e.target.value)}
-                    className="w-full bg-slate-800 border border-slate-700 rounded-md px-2.5 py-1.5 text-xs text-slate-100"
+                    className="w-full bg-white border border-neutral-200 rounded px-2.5 py-1.5 text-xs text-neutral-900"
                   />
                 </div>
                 <div>
-                  <label className="block text-[11px] text-slate-400 mb-1">
+                  <label className="block text-[11px] text-neutral-500 mb-1">
                     {t.issuance.issueDate}
                   </label>
                   <input
                     type="date"
                     value={issueDate}
                     onChange={(e) => setIssueDate(e.target.value)}
-                    className="w-full bg-slate-800 border border-slate-700 rounded-md px-2.5 py-1.5 text-xs text-slate-100"
+                    className="w-full bg-white border border-neutral-200 rounded px-2.5 py-1.5 text-xs text-neutral-900"
                   />
                 </div>
               </div>
 
-              {/* Submit Button */}
+              {/* Submit Button: Pure Black Primary Button */}
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="w-full mt-2 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs rounded-lg shadow-sm transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+                className="w-full mt-2 py-2.5 bg-neutral-900 hover:bg-neutral-800 text-white font-medium text-xs rounded transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
               >
-                <Sparkles className="w-4 h-4" />
+                <Check className="w-4 h-4" />
                 {isSubmitting ? t.issuance.issuing : t.issuance.issueBtn}
               </button>
             </form>
@@ -484,16 +486,16 @@ export const IssuanceHub: React.FC<IssuanceHubProps> = ({
           <div className="lg:col-span-7 space-y-4">
             {/* Post-Issuance Banner if issued */}
             {issuedCertificate && (
-              <div className="bg-emerald-950/40 border border-emerald-500/40 rounded-xl p-4 flex flex-col sm:flex-row items-center justify-between gap-4 animate-fade-in">
+              <div className="bg-neutral-50 border border-neutral-200 rounded p-4 flex flex-col sm:flex-row items-center justify-between gap-4 animate-fade-in">
                 <div className="flex items-center gap-3">
-                  <CheckCircle2 className="w-6 h-6 text-emerald-400 shrink-0" />
+                  <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
                   <div>
-                    <h3 className="text-xs font-bold text-emerald-300">
+                    <h3 className="text-xs font-bold text-neutral-900">
                       {t.issuance.successTitle}
                     </h3>
-                    <p className="text-[11px] text-emerald-200/80">
-                      Certificate ID:{' '}
-                      <span className="font-mono font-bold text-white">
+                    <p className="text-[11px] text-neutral-500">
+                      Official ID:{' '}
+                      <span className="font-mono font-semibold text-neutral-950">
                         {issuedCertificate.id}
                       </span>
                     </p>
@@ -503,31 +505,31 @@ export const IssuanceHub: React.FC<IssuanceHubProps> = ({
                 <div className="flex items-center gap-2">
                   <button
                     onClick={() => handleCopyLink(issuedCertificate.id)}
-                    className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 text-xs rounded-md transition-colors flex items-center gap-1.5"
+                    className="px-3 py-1.5 bg-white hover:bg-neutral-50 border border-neutral-200 text-neutral-800 text-xs rounded transition-colors flex items-center gap-1.5"
                   >
-                    <Copy className="w-3.5 h-3.5 text-indigo-400" />
+                    <Copy className="w-3.5 h-3.5 text-neutral-600" />
                     {copiedLink ? t.common.copied : t.common.copyLink}
                   </button>
 
                   <button
                     onClick={onNavigateToRegistry}
-                    className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold rounded-md transition-colors flex items-center gap-1"
+                    className="px-3 py-1.5 bg-neutral-900 hover:bg-neutral-800 text-white text-xs font-medium rounded transition-colors flex items-center gap-1"
                   >
                     {t.issuance.viewCert}
-                    <ArrowRight className="w-3.5 h-3.5" />
+                    <ArrowRight className="w-3.5 h-3.5 rtl:rotate-180" />
                   </button>
                 </div>
               </div>
             )}
 
             {/* Live Visual Preview */}
-            <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 overflow-hidden flex flex-col items-center justify-center">
-              <div className="w-full flex items-center justify-between pb-3 border-b border-slate-800 text-xs text-slate-400">
-                <span className="font-medium text-slate-300 flex items-center gap-1.5">
-                  <ShieldCheck className="w-4 h-4 text-indigo-400" />
+            <div className="bg-neutral-50/50 border border-neutral-200 rounded p-4 overflow-hidden flex flex-col items-center justify-center">
+              <div className="w-full flex items-center justify-between pb-3 border-b border-neutral-200 text-xs text-neutral-500">
+                <span className="font-medium text-neutral-800 flex items-center gap-1.5">
+                  <ShieldCheck className="w-4 h-4 text-neutral-600" />
                   {t.common.preview}
                 </span>
-                <span className="text-[11px] text-slate-500">
+                <span className="text-[11px] text-neutral-500">
                   {selectedTemplate?.title}
                 </span>
               </div>
@@ -553,15 +555,15 @@ export const IssuanceHub: React.FC<IssuanceHubProps> = ({
         /* Bulk CSV Issuance View */
         <div className="space-y-6">
           {/* Template selection & Sample CSV download */}
-          <div className="bg-slate-900/60 border border-slate-800 rounded-xl p-5 flex flex-col md:flex-row items-center justify-between gap-4">
+          <div className="bg-white border border-neutral-200 rounded p-5 flex flex-col md:flex-row items-center justify-between gap-4">
             <div className="w-full md:w-1/2">
-              <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+              <label className="block text-xs font-semibold text-neutral-800 mb-1.5">
                 {t.issuance.selectTemplate}
               </label>
               <select
                 value={selectedTemplateId}
                 onChange={(e) => setSelectedTemplateId(e.target.value)}
-                className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-100"
+                className="w-full bg-white border border-neutral-200 rounded px-3 py-2 text-xs text-neutral-900"
               >
                 {templates.map((tpl) => (
                   <option key={tpl.id} value={tpl.id}>
@@ -573,21 +575,21 @@ export const IssuanceHub: React.FC<IssuanceHubProps> = ({
 
             <button
               onClick={handleDownloadSampleCsv}
-              className="flex items-center gap-2 px-3.5 py-2 bg-slate-800 hover:bg-slate-750 border border-slate-700 text-slate-200 text-xs font-medium rounded-lg transition-colors whitespace-nowrap"
+              className="flex items-center gap-2 px-3.5 py-2 bg-white hover:bg-neutral-50 border border-neutral-200 text-neutral-800 text-xs font-medium rounded transition-colors whitespace-nowrap"
             >
-              <Download className="w-3.5 h-3.5 text-indigo-400" />
+              <Download className="w-3.5 h-3.5 text-neutral-600" />
               {t.issuance.downloadCsvSample}
             </button>
           </div>
 
           {/* Drag & Drop CSV Uploader */}
-          <label className="border-2 border-dashed border-slate-700 hover:border-indigo-500 rounded-2xl p-8 flex flex-col items-center justify-center gap-3 bg-slate-900/40 cursor-pointer transition-all">
-            <UploadCloud className="w-10 h-10 text-indigo-400" />
+          <label className="border border-dashed border-neutral-300 hover:border-neutral-500 rounded p-8 flex flex-col items-center justify-center gap-3 bg-neutral-50/50 cursor-pointer transition-all">
+            <UploadCloud className="w-8 h-8 text-neutral-600" />
             <div className="text-center">
-              <span className="text-sm font-semibold text-slate-200">
+              <span className="text-xs font-semibold text-neutral-900">
                 {t.issuance.bulkUploadTitle}
               </span>
-              <p className="text-xs text-slate-500 mt-1">
+              <p className="text-[11px] text-neutral-500 mt-1">
                 {t.issuance.bulkUploadDesc}
               </p>
             </div>
@@ -601,14 +603,14 @@ export const IssuanceHub: React.FC<IssuanceHubProps> = ({
 
           {/* Column Mapping Section if headers loaded */}
           {csvHeaders.length > 0 && (
-            <div className="bg-slate-900/70 border border-slate-800 rounded-xl p-5 space-y-4">
-              <h3 className="text-xs font-bold text-slate-200 uppercase tracking-wider">
+            <div className="bg-white border border-neutral-200 rounded p-5 space-y-4">
+              <h3 className="text-xs font-bold text-neutral-900 uppercase tracking-wider">
                 {t.issuance.mappingTitle}
               </h3>
 
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div>
-                  <label className="block text-[11px] text-slate-400 mb-1">
+                  <label className="block text-[11px] text-neutral-500 mb-1">
                     {t.issuance.colName} *
                   </label>
                   <select
@@ -616,7 +618,7 @@ export const IssuanceHub: React.FC<IssuanceHubProps> = ({
                     onChange={(e) =>
                       handleMappingChange(e.target.value, colEmail, colNameAr)
                     }
-                    className="w-full bg-slate-800 border border-slate-700 rounded-md px-2.5 py-1.5 text-xs text-slate-200"
+                    className="w-full bg-white border border-neutral-200 rounded px-2.5 py-1.5 text-xs text-neutral-900"
                   >
                     <option value="">Select Column...</option>
                     {csvHeaders.map((h) => (
@@ -628,7 +630,7 @@ export const IssuanceHub: React.FC<IssuanceHubProps> = ({
                 </div>
 
                 <div>
-                  <label className="block text-[11px] text-slate-400 mb-1">
+                  <label className="block text-[11px] text-neutral-500 mb-1">
                     {t.issuance.colEmail} *
                   </label>
                   <select
@@ -636,7 +638,7 @@ export const IssuanceHub: React.FC<IssuanceHubProps> = ({
                     onChange={(e) =>
                       handleMappingChange(colName, e.target.value, colNameAr)
                     }
-                    className="w-full bg-slate-800 border border-slate-700 rounded-md px-2.5 py-1.5 text-xs text-slate-200"
+                    className="w-full bg-white border border-neutral-200 rounded px-2.5 py-1.5 text-xs text-neutral-900"
                   >
                     <option value="">Select Column...</option>
                     {csvHeaders.map((h) => (
@@ -648,7 +650,7 @@ export const IssuanceHub: React.FC<IssuanceHubProps> = ({
                 </div>
 
                 <div>
-                  <label className="block text-[11px] text-slate-400 mb-1">
+                  <label className="block text-[11px] text-neutral-500 mb-1">
                     {t.issuance.colNameAr}
                   </label>
                   <select
@@ -656,7 +658,7 @@ export const IssuanceHub: React.FC<IssuanceHubProps> = ({
                     onChange={(e) =>
                       handleMappingChange(colName, colEmail, e.target.value)
                     }
-                    className="w-full bg-slate-800 border border-slate-700 rounded-md px-2.5 py-1.5 text-xs text-slate-200"
+                    className="w-full bg-white border border-neutral-200 rounded px-2.5 py-1.5 text-xs text-neutral-900"
                   >
                     <option value="">(Optional) Select Arabic Column...</option>
                     {csvHeaders.map((h) => (
@@ -671,56 +673,56 @@ export const IssuanceHub: React.FC<IssuanceHubProps> = ({
               {/* Data Summary Stats */}
               <div className="flex flex-wrap items-center gap-4 pt-2 text-xs">
                 <div className="flex items-center gap-2">
-                  <span className="text-slate-400">{t.issuance.totalRows}:</span>
-                  <span className="font-mono font-bold text-slate-200">
+                  <span className="text-neutral-500">{t.issuance.totalRows}:</span>
+                  <span className="font-mono font-bold text-neutral-900">
                     {parsedRows.length}
                   </span>
                 </div>
-                <div className="h-3 w-[1px] bg-slate-700" />
+                <div className="h-3 w-[1px] bg-neutral-200" />
                 <div className="flex items-center gap-2">
-                  <span className="text-slate-400">{t.issuance.validRows}:</span>
-                  <span className="font-mono font-bold text-emerald-400">
+                  <span className="text-neutral-500">{t.issuance.validRows}:</span>
+                  <span className="font-mono font-bold text-emerald-700">
                     {parsedRows.filter((r) => r.isValid).length}
                   </span>
                 </div>
-                <div className="h-3 w-[1px] bg-slate-700" />
+                <div className="h-3 w-[1px] bg-neutral-200" />
                 <div className="flex items-center gap-2">
-                  <span className="text-slate-400">{t.issuance.invalidRows}:</span>
-                  <span className="font-mono font-bold text-rose-400">
+                  <span className="text-neutral-500">{t.issuance.invalidRows}:</span>
+                  <span className="font-mono font-bold text-rose-700">
                     {parsedRows.filter((r) => !r.isValid).length}
                   </span>
                 </div>
-                <div className="h-3 w-[1px] bg-slate-700" />
+                <div className="h-3 w-[1px] bg-neutral-200" />
                 <div className="flex items-center gap-2">
-                  <span className="text-slate-400">{t.issuance.duplicateWarnings}:</span>
-                  <span className="font-mono font-bold text-amber-400">
+                  <span className="text-neutral-500">{t.issuance.duplicateWarnings}:</span>
+                  <span className="font-mono font-bold text-amber-700">
                     {parsedRows.filter((r) => r.isDuplicateCandidate).length}
                   </span>
                 </div>
               </div>
 
               {/* Validation Preview Table */}
-              <div className="border border-slate-800 rounded-lg overflow-x-auto max-h-60">
+              <div className="border border-neutral-200 rounded overflow-x-auto max-h-60">
                 <table className="w-full text-left text-xs">
-                  <thead className="bg-slate-800/80 text-slate-400 border-b border-slate-700 text-[11px]">
+                  <thead className="bg-neutral-50 text-neutral-600 border-b border-neutral-200 text-[11px] font-medium">
                     <tr>
                       <th className="py-2 px-3">#</th>
                       <th className="py-2 px-3">Recipient Name</th>
                       <th className="py-2 px-3">Email</th>
                       <th className="py-2 px-3">Arabic Name</th>
-                      <th className="py-2 px-3">Status / Errors</th>
+                      <th className="py-2 px-3">Status</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-800 text-slate-300">
+                  <tbody className="divide-y divide-neutral-200 text-neutral-800">
                     {parsedRows.slice(0, 15).map((row) => (
-                      <tr key={row.rowNumber} className="hover:bg-slate-800/40">
-                        <td className="py-2 px-3 font-mono text-slate-500">
+                      <tr key={row.rowNumber} className="hover:bg-neutral-50">
+                        <td className="py-2 px-3 font-mono text-neutral-500">
                           {row.rowNumber}
                         </td>
-                        <td className="py-2 px-3 font-medium text-slate-100">
+                        <td className="py-2 px-3 font-medium text-neutral-900">
                           {row.recipientName || '—'}
                         </td>
-                        <td className="py-2 px-3 text-slate-400">
+                        <td className="py-2 px-3 text-neutral-600 font-mono">
                           {row.recipientEmail || '—'}
                         </td>
                         <td className="py-2 px-3 font-cairo">
@@ -728,12 +730,12 @@ export const IssuanceHub: React.FC<IssuanceHubProps> = ({
                         </td>
                         <td className="py-2 px-3">
                           {row.isValid ? (
-                            <span className="text-emerald-400 font-medium flex items-center gap-1">
-                              <CheckCircle2 className="w-3.5 h-3.5" /> Valid
+                            <span className="text-emerald-700 font-medium flex items-center gap-1 text-[11px]">
+                              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" /> Ready
                             </span>
                           ) : (
-                            <span className="text-rose-400 flex items-center gap-1">
-                              <AlertTriangle className="w-3.5 h-3.5" />
+                            <span className="text-rose-700 flex items-center gap-1 text-[11px]">
+                              <AlertTriangle className="w-3.5 h-3.5 text-rose-600" />
                               {row.errors.join(', ')}
                             </span>
                           )}
@@ -747,8 +749,8 @@ export const IssuanceHub: React.FC<IssuanceHubProps> = ({
               {/* Batch Action Button */}
               <div className="flex items-center justify-between pt-2">
                 {batchSuccessCount !== null ? (
-                  <div className="text-xs text-emerald-400 font-medium flex items-center gap-2">
-                    <CheckCircle2 className="w-4 h-4" />
+                  <div className="text-xs text-emerald-700 font-medium flex items-center gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600" />
                     {batchSuccessCount} {t.issuance.batchSuccess}
                   </div>
                 ) : (
@@ -761,9 +763,9 @@ export const IssuanceHub: React.FC<IssuanceHubProps> = ({
                     isProcessingBatch ||
                     parsedRows.filter((r) => r.isValid).length === 0
                   }
-                  className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs rounded-lg shadow-sm transition-colors flex items-center gap-2 disabled:opacity-50"
+                  className="px-5 py-2 bg-neutral-900 hover:bg-neutral-800 text-white font-medium text-xs rounded transition-colors flex items-center gap-2 disabled:opacity-50"
                 >
-                  <Sparkles className="w-4 h-4" />
+                  <Check className="w-4 h-4" />
                   {isProcessingBatch
                     ? t.issuance.batchProcessing
                     : `${t.issuance.startBatch} (${

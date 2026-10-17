@@ -5,10 +5,20 @@ import QRCode from 'qrcode';
  */
 export async function generateVerificationQr(
   certificateId: string,
-  baseUrl: string = window.location.origin
+  baseUrl?: string
 ): Promise<string> {
+  // Safe origin resolution for browser and iframe sandboxes
+  let host = baseUrl;
+  if (!host) {
+    if (typeof window !== 'undefined' && window.location?.origin && window.location.origin !== 'null') {
+      host = window.location.origin;
+    } else {
+      host = '';
+    }
+  }
+
   // Real public verification URL linking directly to verification portal
-  const verificationUrl = `${baseUrl}/?verify=${encodeURIComponent(certificateId)}`;
+  const verificationUrl = `${host}/?verify=${encodeURIComponent(certificateId)}`;
 
   try {
     const dataUrl = await QRCode.toDataURL(verificationUrl, {
@@ -23,7 +33,6 @@ export async function generateVerificationQr(
     return dataUrl;
   } catch (err) {
     console.error('Failed to generate QR code:', err);
-    // Return empty fallback if generation fails
     return '';
   }
 }

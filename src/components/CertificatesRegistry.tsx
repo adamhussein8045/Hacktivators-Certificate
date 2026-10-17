@@ -1,40 +1,39 @@
 import React, { useState, useRef } from 'react';
-import { Certificate, AuditLogEntry, Language, UserRole } from '../types';
+import { Certificate, AuditLogEntry, Language, UserRole, Organization } from '../types';
 import { CertificateRenderer } from './CertificateRenderer';
 import { exportElementToPdf, exportElementToPng } from '../utils/exportEngine';
 import { translations } from '../i18n/translations';
 import {
   Search,
-  Filter,
   Download,
   Copy,
   ExternalLink,
   Slash,
   Eye,
-  CheckCircle2,
-  XCircle,
-  AlertTriangle,
+  Check,
   X,
   FileText,
   ShieldAlert,
 } from 'lucide-react';
 
 interface CertificatesRegistryProps {
-  currentOrgId: string;
+  currentOrg: Organization;
   lang: Language;
   userRole: UserRole;
   certificates: Certificate[];
   onRevokeCertificate: (certId: string, reason: string, audit: AuditLogEntry) => void;
   onSelectForVerification: (certId: string) => void;
+  onNavigateToIssue?: () => void;
 }
 
 export const CertificatesRegistry: React.FC<CertificatesRegistryProps> = ({
-  currentOrgId,
+  currentOrg,
   lang,
   userRole,
   certificates,
   onRevokeCertificate,
   onSelectForVerification,
+  onNavigateToIssue,
 }) => {
   const t = translations[lang];
 
@@ -49,7 +48,7 @@ export const CertificatesRegistry: React.FC<CertificatesRegistryProps> = ({
   const modalPrintRef = useRef<HTMLDivElement>(null);
 
   // Tenant-scoped filtering
-  const orgCertificates = certificates.filter((c) => c.orgId === currentOrgId);
+  const orgCertificates = certificates.filter((c) => c.orgId === currentOrg.id);
 
   const filteredCertificates = orgCertificates.filter((cert) => {
     const matchesSearch =
@@ -65,8 +64,13 @@ export const CertificatesRegistry: React.FC<CertificatesRegistryProps> = ({
   });
 
   const handleCopyLink = (certId: string) => {
-    const url = `${window.location.origin}/?verify=${certId}`;
-    navigator.clipboard.writeText(url);
+    const origin = typeof window !== 'undefined' && window.location?.origin && window.location.origin !== 'null'
+      ? window.location.origin
+      : '';
+    const url = `${origin}/?verify=${certId}`;
+    if (navigator?.clipboard?.writeText) {
+      navigator.clipboard.writeText(url).catch(() => {});
+    }
     setCopiedId(certId);
     setTimeout(() => setCopiedId(null), 2500);
   };
@@ -79,7 +83,7 @@ export const CertificatesRegistry: React.FC<CertificatesRegistryProps> = ({
 
     const audit: AuditLogEntry = {
       id: `audit-${Date.now()}`,
-      orgId: currentOrgId,
+      orgId: currentOrg.id,
       actorName: 'Adam Hussein',
       actorEmail: 'adamhussein8045@gmail.com',
       actorRole: userRole,
@@ -96,68 +100,76 @@ export const CertificatesRegistry: React.FC<CertificatesRegistryProps> = ({
   };
 
   const handleDownloadPdf = async (cert: Certificate) => {
-    setActiveModalCert(cert);
-    setDownloadingCertId(cert.id);
-    setTimeout(async () => {
-      if (modalPrintRef.current) {
-        await exportElementToPdf(modalPrintRef.current, {
-          fileName: `${cert.id}-${cert.recipientName.replace(/\s+/g, '_')}.pdf`,
-          orientation: cert.templateSnapshot.orientation,
-        });
-      }
+    if (!modalPrintRef.current) return;
+    try {
+      setDownloadingCertId(cert.id);
+      await exportElementToPdf(modalPrintRef.current, {
+        fileName: `${cert.id}-${cert.recipientName.replace(/\s+/g, '_')}.pdf`,
+        orientation: cert.templateSnapshot?.orientation || 'landscape',
+        scale: 2.5,
+      });
+    } catch (e) {
+      console.error('PDF export error', e);
+    } finally {
       setDownloadingCertId(null);
-    }, 200);
+    }
   };
 
   const handleDownloadPng = async (cert: Certificate) => {
-    setActiveModalCert(cert);
-    setDownloadingCertId(cert.id);
-    setTimeout(async () => {
-      if (modalPrintRef.current) {
-        await exportElementToPng(modalPrintRef.current, {
-          fileName: `${cert.id}-${cert.recipientName.replace(/\s+/g, '_')}.png`,
-        });
-      }
+    if (!modalPrintRef.current) return;
+    try {
+      setDownloadingCertId(cert.id);
+      await exportElementToPng(modalPrintRef.current, {
+        fileName: `${cert.id}-${cert.recipientName.replace(/\s+/g, '_')}.png`,
+        scale: 2.5,
+      });
+    } catch (e) {
+      console.error('PNG export error', e);
+    } finally {
       setDownloadingCertId(null);
-    }, 200);
+    }
   };
 
   return (
-    <div className="p-6 max-w-7xl mx-auto space-y-6">
+    <div className="p-8 max-w-7xl mx-auto space-y-6 bg-white text-neutral-900">
       {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-slate-800">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-6 border-b border-neutral-200">
         <div>
-          <h1 className="text-xl font-bold text-slate-100 flex items-center gap-2">
-            <FileText className="w-5 h-5 text-indigo-400" />
+          <h1 className="text-xl font-bold tracking-tight text-neutral-950 flex items-center gap-2">
+            <FileText className="w-5 h-5 text-neutral-700" />
             {t.registry.title}
           </h1>
-          <p className="text-xs text-slate-400 mt-1">
-            {t.registry.subtitle} <span className="text-indigo-400 font-medium">Hacktivators Team</span> ({orgCertificates.length} credentials)
+          <p className="text-xs text-neutral-500 mt-1">
+            {t.registry.subtitle}{' '}
+            <span className="text-neutral-900 font-semibold">
+              {lang === 'ar' ? currentOrg.nameAr : currentOrg.name}
+            </span>{' '}
+            ({orgCertificates.length} credentials)
           </p>
         </div>
 
         {/* Search & Status Filters */}
         <div className="flex flex-wrap items-center gap-3">
           <div className="relative">
-            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+            <Search className="w-3.5 h-3.5 text-neutral-400 absolute left-3 top-2.5 rtl:left-auto rtl:right-3" />
             <input
               type="text"
               placeholder={t.registry.searchPlaceholder}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="bg-slate-900 border border-slate-800 rounded-lg pl-9 pr-3 py-1.5 text-xs text-slate-200 placeholder-slate-500 w-64 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+              className="bg-white border border-neutral-200 rounded px-3 py-1.5 pl-8 rtl:pl-3 rtl:pr-8 text-xs text-neutral-900 placeholder-neutral-400 w-64 focus:outline-none focus:ring-1 focus:ring-neutral-900"
             />
           </div>
 
-          <div className="flex items-center bg-slate-900 p-0.5 rounded-lg border border-slate-800 text-xs">
+          <div className="flex items-center bg-neutral-100 p-0.5 rounded border border-neutral-200 text-xs">
             {(['all', 'valid', 'revoked'] as const).map((st) => (
               <button
                 key={st}
                 onClick={() => setStatusFilter(st)}
-                className={`px-3 py-1 rounded-md capitalize font-medium transition-colors ${
+                className={`px-3 py-1 rounded capitalize font-medium transition-colors ${
                   statusFilter === st
-                    ? 'bg-slate-800 text-indigo-400 shadow-sm'
-                    : 'text-slate-400 hover:text-slate-200'
+                    ? 'bg-white text-neutral-950 shadow-xs font-semibold'
+                    : 'text-neutral-600 hover:text-neutral-900'
                 }`}
               >
                 {t.common[st]}
@@ -168,101 +180,122 @@ export const CertificatesRegistry: React.FC<CertificatesRegistryProps> = ({
       </div>
 
       {/* Registry Table */}
-      <div className="bg-slate-900/60 border border-slate-800 rounded-xl overflow-hidden shadow-sm">
+      <div className="bg-white border border-neutral-200 rounded overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
-            <thead className="bg-slate-800/80 text-slate-400 border-b border-slate-700/80 text-[11px] font-semibold">
+          <table className="w-full text-left rtl:text-right text-xs">
+            <thead className="bg-neutral-50 text-neutral-600 border-b border-neutral-200 text-[11px] font-semibold">
               <tr>
                 <th className="py-3 px-4">{t.registry.thId}</th>
                 <th className="py-3 px-4">{t.registry.thRecipient}</th>
                 <th className="py-3 px-4">{t.registry.thTitle}</th>
                 <th className="py-3 px-4">{t.registry.thDate}</th>
                 <th className="py-3 px-4">{t.registry.thStatus}</th>
-                <th className="py-3 px-4 text-right">{t.registry.thActions}</th>
+                <th className="py-3 px-4 text-right rtl:text-left">{t.registry.thActions}</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-800 text-slate-300">
+            <tbody className="divide-y divide-neutral-200 text-neutral-700">
               {filteredCertificates.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="py-8 text-center text-slate-500">
-                    No matching certificates found.
+                  <td colSpan={6} className="py-12 text-center text-neutral-500">
+                    <div className="space-y-2 max-w-sm mx-auto">
+                      <div className="w-8 h-8 rounded bg-neutral-100 border border-neutral-200 flex items-center justify-center mx-auto text-neutral-400">
+                        <FileText className="w-4 h-4" />
+                      </div>
+                      <div className="text-xs font-semibold text-neutral-900">
+                        {orgCertificates.length === 0
+                          ? (lang === 'ar' ? 'لا توجد شهادات مسجلة لهذه المؤسسة بعد' : 'No certificates issued yet for this organization')
+                          : (lang === 'ar' ? 'لا توجد نتائج تطابق بحثك' : 'No matching certificates found')}
+                      </div>
+                      <p className="text-[11px] text-neutral-500">
+                        {orgCertificates.length === 0
+                          ? (lang === 'ar' ? 'ابدأ بإصدار شهادتك الأولى أو استيراد جماعي عبر CSV لبدء السجل.' : 'Issue your first credential or perform a bulk CSV import to create registry records.')
+                          : (lang === 'ar' ? 'جرب البحث باسم آخر أو التحقق من صحة الرقم المرجعي.' : 'Try adjusting your search criteria or resetting status filters.')}
+                      </p>
+                      {orgCertificates.length === 0 && onNavigateToIssue && (
+                        <div className="pt-2">
+                          <button
+                            onClick={onNavigateToIssue}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-neutral-900 hover:bg-neutral-800 text-white text-xs font-medium rounded transition-colors"
+                          >
+                            {lang === 'ar' ? 'إصدار شهادة الآن' : 'Issue Certificate Now'}
+                          </button>
+                        </div>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ) : (
                 filteredCertificates.map((cert) => (
-                  <tr key={cert.id} className="hover:bg-slate-800/40 transition-colors">
-                    <td className="py-3 px-4 font-mono font-semibold text-slate-200">
+                  <tr key={cert.id} className="hover:bg-neutral-50 transition-colors">
+                    <td className="py-3 px-4 font-mono font-semibold text-neutral-900">
                       {cert.id}
                     </td>
 
                     <td className="py-3 px-4">
-                      <div className="font-medium text-slate-100">{cert.recipientName}</div>
+                      <div className="font-medium text-neutral-950">{cert.recipientName}</div>
                       {cert.recipientNameAr && (
-                        <div className="text-[11px] text-slate-400 font-cairo">
+                        <div className="text-[11px] text-neutral-500 font-cairo">
                           {cert.recipientNameAr}
                         </div>
                       )}
-                      <div className="text-[10px] text-slate-500 font-mono">
+                      <div className="text-[10px] text-neutral-400 font-mono">
                         {cert.recipientEmail}
                       </div>
                     </td>
 
                     <td className="py-3 px-4 max-w-xs">
-                      <div className="truncate font-medium text-slate-200">{cert.title}</div>
-                      <div className="text-[11px] text-slate-500 truncate">
+                      <div className="truncate font-medium text-neutral-900">{cert.title}</div>
+                      <div className="text-[11px] text-neutral-500 truncate">
                         {cert.templateSnapshot?.title}
                       </div>
                     </td>
 
-                    <td className="py-3 px-4 font-mono text-slate-400">
+                    <td className="py-3 px-4 font-mono text-neutral-500">
                       {cert.issueDate}
                     </td>
 
                     <td className="py-3 px-4">
                       {cert.status === 'valid' ? (
-                        <span className="inline-flex items-center gap-1.5 text-emerald-400 font-medium">
-                          <CheckCircle2 className="w-3.5 h-3.5" /> {t.common.valid}
+                        <span className="inline-flex items-center gap-1.5 text-emerald-700 font-medium">
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-600" />
+                          {t.common.valid}
                         </span>
                       ) : (
-                        <span className="inline-flex items-center gap-1.5 text-rose-400 font-medium">
-                          <XCircle className="w-3.5 h-3.5" /> {t.common.revoked}
+                        <span className="inline-flex items-center gap-1.5 text-rose-700 font-medium">
+                          <span className="w-1.5 h-1.5 rounded-full bg-rose-600" />
+                          {t.common.revoked}
                         </span>
                       )}
                     </td>
 
-                    <td className="py-3 px-4 text-right">
-                      <div className="flex items-center justify-end gap-1.5">
+                    <td className="py-3 px-4 text-right rtl:text-left">
+                      <div className="flex items-center justify-end rtl:justify-start gap-1">
                         {/* View Preview */}
                         <button
                           onClick={() => setActiveModalCert(cert)}
-                          className="p-1.5 text-slate-400 hover:text-slate-100 hover:bg-slate-800 rounded transition-colors"
+                          className="p-1.5 text-neutral-500 hover:text-neutral-950 hover:bg-neutral-100 rounded transition-colors"
                           title="View Certificate"
                         >
                           <Eye className="w-3.5 h-3.5" />
                         </button>
 
-                        {/* Download PDF */}
-                        <button
-                          onClick={() => handleDownloadPdf(cert)}
-                          className="p-1.5 text-indigo-400 hover:text-indigo-300 hover:bg-slate-800 rounded transition-colors"
-                          title="Download PDF"
-                        >
-                          <Download className="w-3.5 h-3.5" />
-                        </button>
-
                         {/* Copy Link */}
                         <button
                           onClick={() => handleCopyLink(cert.id)}
-                          className="p-1.5 text-slate-400 hover:text-slate-100 hover:bg-slate-800 rounded transition-colors"
-                          title="Copy Public Link"
+                          className="p-1.5 text-neutral-500 hover:text-neutral-950 hover:bg-neutral-100 rounded transition-colors"
+                          title={t.common.copyLink}
                         >
-                          <Copy className="w-3.5 h-3.5" />
+                          {copiedId === cert.id ? (
+                            <Check className="w-3.5 h-3.5 text-emerald-600" />
+                          ) : (
+                            <Copy className="w-3.5 h-3.5" />
+                          )}
                         </button>
 
                         {/* Direct Verify */}
                         <button
                           onClick={() => onSelectForVerification(cert.id)}
-                          className="p-1.5 text-emerald-400 hover:text-emerald-300 hover:bg-slate-800 rounded transition-colors"
+                          className="p-1.5 text-neutral-500 hover:text-neutral-950 hover:bg-neutral-100 rounded transition-colors"
                           title="Open Verification Page"
                         >
                           <ExternalLink className="w-3.5 h-3.5" />
@@ -272,7 +305,7 @@ export const CertificatesRegistry: React.FC<CertificatesRegistryProps> = ({
                         {cert.status === 'valid' && (userRole === 'platform_owner' || userRole === 'org_admin') && (
                           <button
                             onClick={() => setActiveRevokeCert(cert)}
-                            className="p-1.5 text-rose-400 hover:text-rose-300 hover:bg-slate-800 rounded transition-colors"
+                            className="p-1.5 text-neutral-400 hover:text-rose-600 hover:bg-neutral-100 rounded transition-colors"
                             title="Revoke Certificate"
                           >
                             <Slash className="w-3.5 h-3.5" />
@@ -290,34 +323,36 @@ export const CertificatesRegistry: React.FC<CertificatesRegistryProps> = ({
 
       {/* Certificate Preview Modal */}
       {activeModalCert && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-5xl w-full p-6 space-y-4">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+        <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white border border-neutral-200 rounded max-w-5xl w-full p-6 space-y-4 shadow-xl">
+            <div className="flex items-center justify-between pb-3 border-b border-neutral-200">
               <div>
-                <h3 className="text-sm font-bold text-slate-100">
+                <h3 className="text-sm font-bold text-neutral-950">
                   {activeModalCert.title}
                 </h3>
-                <p className="text-xs text-slate-400">
-                  Credential ID: <span className="font-mono text-indigo-400">{activeModalCert.id}</span>
+                <p className="text-xs text-neutral-500">
+                  Credential ID: <span className="font-mono text-neutral-900 font-medium">{activeModalCert.id}</span>
                 </p>
               </div>
 
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => handleDownloadPdf(activeModalCert)}
-                  className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold rounded-lg flex items-center gap-1.5"
+                  disabled={downloadingCertId === activeModalCert.id}
+                  className="px-3 py-1.5 bg-neutral-900 hover:bg-neutral-800 text-white text-xs font-medium rounded flex items-center gap-1.5 transition-colors"
                 >
-                  <Download className="w-3.5 h-3.5" /> PDF
+                  <Download className="w-3.5 h-3.5" /> {downloadingCertId === activeModalCert.id ? 'Exporting...' : 'PDF'}
                 </button>
                 <button
                   onClick={() => handleDownloadPng(activeModalCert)}
-                  className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold rounded-lg flex items-center gap-1.5"
+                  disabled={downloadingCertId === activeModalCert.id}
+                  className="px-3 py-1.5 bg-white border border-neutral-200 hover:bg-neutral-50 text-neutral-800 text-xs font-medium rounded flex items-center gap-1.5 transition-colors"
                 >
                   <Download className="w-3.5 h-3.5" /> PNG
                 </button>
                 <button
                   onClick={() => setActiveModalCert(null)}
-                  className="p-1 text-slate-400 hover:text-slate-100"
+                  className="p-1 text-neutral-400 hover:text-neutral-900 rounded"
                 >
                   <X className="w-5 h-5" />
                 </button>
@@ -325,7 +360,7 @@ export const CertificatesRegistry: React.FC<CertificatesRegistryProps> = ({
             </div>
 
             {/* Certificate render container */}
-            <div className="flex items-center justify-center py-4 overflow-x-auto bg-slate-950 rounded-xl p-4">
+            <div className="flex items-center justify-center py-4 overflow-x-auto bg-neutral-50 border border-neutral-200 rounded p-4">
               <div className="scale-[0.58] sm:scale-[0.72] origin-top">
                 <CertificateRenderer
                   innerRef={modalPrintRef}
@@ -346,34 +381,34 @@ export const CertificatesRegistry: React.FC<CertificatesRegistryProps> = ({
 
       {/* Revocation Reason Confirmation Modal */}
       {activeRevokeCert && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-rose-500/30 rounded-2xl max-w-md w-full p-6 space-y-4 shadow-2xl">
-            <div className="flex items-center gap-3 text-rose-400">
-              <ShieldAlert className="w-6 h-6" />
-              <h3 className="text-sm font-bold text-slate-100">
+        <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4">
+          <div className="bg-white border border-neutral-200 rounded max-w-md w-full p-6 space-y-4 shadow-xl">
+            <div className="flex items-center gap-2.5 text-rose-600">
+              <ShieldAlert className="w-5 h-5 shrink-0" />
+              <h3 className="text-sm font-bold text-neutral-950">
                 {t.registry.revokeTitle}
               </h3>
             </div>
 
-            <p className="text-xs text-slate-300 leading-relaxed">
+            <p className="text-xs text-neutral-600 leading-relaxed">
               {t.registry.revokeDesc}
             </p>
 
-            <div className="bg-slate-800/60 p-3 rounded-lg border border-slate-700 text-xs space-y-1">
+            <div className="bg-neutral-50 p-3 rounded border border-neutral-200 text-xs space-y-1">
               <div>
-                <span className="text-slate-400">Recipient:</span>{' '}
-                <span className="font-semibold text-slate-200">
+                <span className="text-neutral-500">Recipient:</span>{' '}
+                <span className="font-semibold text-neutral-900">
                   {activeRevokeCert.recipientName}
                 </span>
               </div>
               <div>
-                <span className="text-slate-400">Cert ID:</span>{' '}
-                <span className="font-mono text-slate-200">{activeRevokeCert.id}</span>
+                <span className="text-neutral-500">Cert ID:</span>{' '}
+                <span className="font-mono text-neutral-900 font-medium">{activeRevokeCert.id}</span>
               </div>
             </div>
 
             <div>
-              <label className="block text-xs font-medium text-slate-300 mb-1">
+              <label className="block text-xs font-medium text-neutral-700 mb-1">
                 {t.registry.revokeReason} *
               </label>
               <textarea
@@ -382,20 +417,20 @@ export const CertificatesRegistry: React.FC<CertificatesRegistryProps> = ({
                 value={revokeReason}
                 onChange={(e) => setRevokeReason(e.target.value)}
                 placeholder={t.registry.reasonPlaceholder}
-                className="w-full bg-slate-800 border border-slate-700 rounded-lg p-2.5 text-xs text-slate-100 focus:outline-none focus:ring-1 focus:ring-rose-500"
+                className="w-full bg-white border border-neutral-200 rounded p-2.5 text-xs text-neutral-900 focus:outline-none focus:ring-1 focus:ring-neutral-900"
               />
             </div>
 
             <div className="flex items-center justify-end gap-2 pt-2">
               <button
                 onClick={() => setActiveRevokeCert(null)}
-                className="px-3.5 py-1.5 bg-slate-800 hover:bg-slate-750 text-slate-300 text-xs rounded-lg"
+                className="px-3.5 py-1.5 bg-white border border-neutral-200 hover:bg-neutral-50 text-neutral-700 text-xs rounded transition-colors"
               >
                 {t.common.cancel}
               </button>
               <button
                 onClick={handleConfirmRevoke}
-                className="px-4 py-1.5 bg-rose-600 hover:bg-rose-500 text-white text-xs font-semibold rounded-lg shadow-sm"
+                className="px-4 py-1.5 bg-rose-600 hover:bg-rose-700 text-white text-xs font-semibold rounded shadow-xs transition-colors"
               >
                 {t.registry.revokeConfirm}
               </button>
