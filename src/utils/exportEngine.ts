@@ -2,6 +2,15 @@ import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
 import { TemplateOrientation } from '../types';
 
+// The on-screen preview is CSS-scaled to fit its container; exports must always
+// render the certificate at its native A4 pixel size.
+function resetPreviewTransform(clonedDoc: Document) {
+  const surface = clonedDoc.getElementById('certificate-print-surface');
+  if (surface) {
+    surface.style.transform = 'none';
+  }
+}
+
 export interface ExportOptions {
   fileName?: string;
   orientation?: TemplateOrientation;
@@ -24,6 +33,7 @@ export async function exportElementToPng(
     backgroundColor: null,
     logging: false,
     imageTimeout: 15000,
+    onclone: resetPreviewTransform,
   });
 
   const dataUrl = canvas.toDataURL('image/png', 1.0);
@@ -57,6 +67,7 @@ export async function exportElementToPdf(
     backgroundColor: '#ffffff',
     logging: false,
     imageTimeout: 15000,
+    onclone: resetPreviewTransform,
   });
 
   const imgData = canvas.toDataURL('image/png', 1.0);

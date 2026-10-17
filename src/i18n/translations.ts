@@ -245,6 +245,10 @@ export const translations = {
       deleteConfirmTitle: 'Remove User from Organization',
       deleteConfirmDesc: 'Are you sure you want to delete this user? This will permanently revoke their access privileges and delete their account from this organization.',
       confirmDelete: 'Yes, Delete User',
+      deleting: 'Deleting...',
+      deleteSuccess: 'User deleted successfully.',
+      deleteFailed: 'Could not delete this user. Please try again.',
+      deleteLastOwner: 'The last Platform Owner cannot be deleted.',
     },
     audit: {
       title: 'Institutional Audit Ledger',
@@ -327,7 +331,7 @@ export const translations = {
       platform_owner: 'مالك المنصة',
       org_admin: 'مدير المؤسسة',
       issuer: 'مُصدر معتمد',
-      auditor: 'مدقق الامتثال',
+      auditor: '��دقق الامتثال',
       public_visitor: 'مستعلم عام',
     },
     dashboard: {
@@ -456,7 +460,7 @@ export const translations = {
       reasonPlaceholder: 'بيان المسوغ الإداري (مثال: صدور الوثيقة عن طريق الخطأ، الإخلال بالمعايير الأكاديمية، انتهاء سريان الاعتماد)',
     },
     verification: {
-      title: 'بوابة التحقق المؤسسية من الاعتمادات',
+      title: 'بوابة التحقق المؤس��ية من الاعتمادات',
       subtitle: 'البوابة العامة للتحقق من مصداقية وصحة الشهادات الصادرة عن فريق هاكتيفيتورز والجهات المعتمدة الشريكة',
       inputLabel: 'أدخل المعرف الرقمي للشهادة',
       placeholder: 'مثال: HCK-2026-CHAMP-01',
@@ -515,6 +519,10 @@ export const translations = {
       deleteConfirmTitle: 'حذف المستخدم من المؤسسة',
       deleteConfirmDesc: 'هل أنت متأكد من رغبتك في حذف هذا المستخدم؟ سيتم إلغاء كافة صلاحيات الوصول الخاصة به وشطب حسابه من قائمة المؤسسة بشكل نهائي.',
       confirmDelete: 'نعم، حذف المستخدم',
+      deleting: 'جارٍ الحذف...',
+      deleteSuccess: 'تم حذف المستخدم بنجاح.',
+      deleteFailed: 'تعذر حذف هذا المستخدم. يرجى المحاولة مرة أخرى.',
+      deleteLastOwner: 'لا يمكن حذف آخر مالك للمنصة.',
     },
     audit: {
       title: 'سجل التدقيق المؤسسي',

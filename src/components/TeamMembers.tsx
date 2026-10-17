@@ -60,7 +60,48 @@ export const TeamMembers: React.FC<TeamMembersProps> = ({
   const [copiedMessage, setCopiedMessage] = useState(false);
   const [copiedTableLinkId, setCopiedTableLinkId] = useState<string | null>(null);
 
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteNotice, setDeleteNotice] = useState<string | null>(null);
+
   const orgMembers = members.filter((m) => m.orgId === currentOrg.id);
+  const canManageMembers = currentRole === 'platform_owner' || currentRole === 'org_admin';
+  const ownerCount = orgMembers.filter((m) => m.role === 'platform_owner').length;
+
+  const isProtectedMember = (member: OrgMember) =>
+    member.role === 'platform_owner' && ownerCount <= 1;
+
+  const openDeleteDialog = (member: OrgMember) => {
+    setDeleteError(null);
+    setMemberToDelete(member);
+  };
+
+  const closeDeleteDialog = () => {
+    if (isDeleting) return;
+    setDeleteError(null);
+    setMemberToDelete(null);
+  };
+
+  const handleConfirmDelete = () => {
+    if (!memberToDelete || !onDeleteMember || isDeleting) return;
+    if (isProtectedMember(memberToDelete)) {
+      setDeleteError(t.members.deleteLastOwner);
+      return;
+    }
+    setIsDeleting(true);
+    setDeleteError(null);
+    try {
+      onDeleteMember(memberToDelete.id);
+      setMemberToDelete(null);
+      setDeleteNotice(`${t.members.deleteSuccess} (${memberToDelete.name})`);
+      setTimeout(() => setDeleteNotice(null), 3000);
+    } catch (err) {
+      console.error('Member deletion failed', err);
+      setDeleteError(t.members.deleteFailed);
+    } finally {
+      setIsDeleting(false);
+    }
+  };
 
   // Helper to construct invitation details
   const buildInvitation = (name: string, email: string, role: UserRole) => {
@@ -304,6 +345,16 @@ Innovation Technology Impact`;
         </div>
       </div>
 
+      {deleteNotice && (
+        <div
+          role="status"
+          className="p-2.5 bg-emerald-50 border border-emerald-200 rounded text-xs text-emerald-800 flex items-center gap-2"
+        >
+          <CheckCircle className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+          <span>{deleteNotice}</span>
+        </div>
+      )}
+
       {/* Roster Table with Gmail and Delete Actions */}
       <div className="bg-white border border-neutral-200 rounded overflow-hidden shadow-xs">
         <div className="overflow-x-auto">
@@ -390,11 +441,18 @@ Innovation Technology Impact`;
                         )}
 
                         {/* Delete User Button next to every user */}
-                        {onDeleteMember && (
+                        {onDeleteMember && canManageMembers && (
                           <button
-                            onClick={() => setMemberToDelete(member)}
-                            title={`${t.members.deleteMember} (${member.name})`}
-                            className="flex items-center gap-1 px-2 py-1 text-red-600 hover:text-red-700 bg-red-50/50 hover:bg-red-50 border border-red-200/60 rounded text-[11px] font-medium transition-colors cursor-pointer"
+                            type="button"
+                            onClick={() => openDeleteDialog(member)}
+                            disabled={isProtectedMember(member)}
+                            title={
+                              isProtectedMember(member)
+                                ? t.members.deleteLastOwner
+                                : `${t.members.deleteMember} (${member.name})`
+                            }
+                            aria-label={`${t.members.deleteMember}: ${member.name}`}
+                            className="flex items-center gap-1 px-2 py-1 text-red-600 hover:text-red-700 bg-red-50/50 hover:bg-red-50 border border-red-200/60 rounded text-[11px] font-medium transition-colors cursor-pointer whitespace-nowrap disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-red-50/50"
                           >
                             <Trash2 className="w-3 h-3" />
                             <span>{t.members.deleteMember}</span>
@@ -667,15 +725,27 @@ Innovation Technology Impact`;
         )}
       {/* Step 3: Delete User Confirmation Modal */}
       {memberToDelete && (
-        <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4">
-          <div className="bg-white border border-neutral-200 rounded max-w-sm w-full p-5 space-y-4 shadow-xl">
+        <div
+          className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4"
+          onClick={closeDeleteDialog}
+          onKeyDown={(e) => {
+            if (e.key === 'Escape') closeDeleteDialog();
+          }}
+        >
+          <div
+            role="alertdialog"
+            aria-modal="true"
+            aria-labelledby="delete-member-title"
+            onClick={(e) => e.stopPropagation()}
+            className="bg-white border border-neutral-200 rounded max-w-sm w-full p-5 space-y-4 shadow-xl"
+          >
             <div className="flex items-start justify-between">
               <div className="flex items-center gap-2">
                 <div className="w-8 h-8 rounded-full bg-red-50 border border-red-200 flex items-center justify-center text-red-600 shrink-0">
                   <Trash2 className="w-4 h-4" />
                 </div>
                 <div>
-                  <h3 className="text-xs font-bold text-neutral-950">
+                  <h3 id="delete-member-title" className="text-xs font-bold text-neutral-950">
                     {t.members.deleteConfirmTitle}
                   </h3>
                   <p className="text-[11px] text-neutral-500">
@@ -703,25 +773,32 @@ Innovation Technology Impact`;
               </div>
             </div>
 
+            {deleteError && (
+              <div
+                role="alert"
+                className="p-2.5 bg-red-50 border border-red-200 rounded text-[11px] text-red-700"
+              >
+                {deleteError}
+              </div>
+            )}
+
             <div className="flex items-center justify-end gap-2 pt-2">
               <button
                 type="button"
-                onClick={() => setMemberToDelete(null)}
-                className="px-3.5 py-1.5 bg-white border border-neutral-200 hover:bg-neutral-50 text-neutral-700 text-xs rounded transition-colors cursor-pointer"
+                onClick={closeDeleteDialog}
+                disabled={isDeleting}
+                autoFocus
+                className="px-3.5 py-1.5 bg-white border border-neutral-200 hover:bg-neutral-50 text-neutral-700 text-xs rounded transition-colors cursor-pointer disabled:opacity-50"
               >
                 {t.common.cancel}
               </button>
               <button
                 type="button"
-                onClick={() => {
-                  if (onDeleteMember) {
-                    onDeleteMember(memberToDelete.id);
-                  }
-                  setMemberToDelete(null);
-                }}
-                className="px-4 py-1.5 bg-red-600 hover:bg-red-700 text-white text-xs font-medium rounded transition-colors shadow-xs cursor-pointer"
+                onClick={handleConfirmDelete}
+                disabled={isDeleting}
+                className="px-4 py-1.5 bg-red-600 hover:bg-red-700 text-white text-xs font-medium rounded transition-colors shadow-xs cursor-pointer disabled:opacity-60"
               >
-                {t.members.confirmDelete}
+                {isDeleting ? t.members.deleting : t.members.confirmDelete}
               </button>
             </div>
           </div>

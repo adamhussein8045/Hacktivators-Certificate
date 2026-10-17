@@ -134,6 +134,7 @@ export interface AuditLogEntry {
     | 'BATCH_CSV_ISSUED'
     | 'ROLE_UPDATED'
     | 'MEMBER_INVITED'
+  | 'MEMBER_DELETED'
     | 'ORG_SETTINGS_UPDATED';
   targetId: string;
   details: string;

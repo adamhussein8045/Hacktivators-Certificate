@@ -160,6 +160,29 @@ export const StorageService = {
     safeSet(STORAGE_KEYS.MEMBERS, members);
   },
 
+  /**
+   * Permanently removes a single member from persistent storage.
+   * Reads the latest persisted list (not stale UI state), writes it back,
+   * and verifies the write. Throws if the member can't be removed.
+   */
+  deleteMember(memberId: string): OrgMember[] {
+    if (typeof window === 'undefined' || !window.localStorage) {
+      throw new Error('Persistent storage is unavailable.');
+    }
+    const current = this.getMembers();
+    if (!current.some((m) => m.id === memberId)) {
+      throw new Error('User not found.');
+    }
+    const next = current.filter((m) => m.id !== memberId);
+    window.localStorage.setItem(STORAGE_KEYS.MEMBERS, JSON.stringify(next));
+
+    const persisted = safeGet<OrgMember[] | null>(STORAGE_KEYS.MEMBERS, null);
+    if (!persisted || persisted.some((m) => m.id === memberId)) {
+      throw new Error('Deletion could not be persisted.');
+    }
+    return persisted;
+  },
+
   // Demo Data State
   isDemoDataLoaded(): boolean {
     return safeGet<boolean>(STORAGE_KEYS.IS_DEMO, false);
