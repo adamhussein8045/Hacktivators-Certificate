@@ -5,12 +5,10 @@ import {
   AuditLogEntry,
   OrgMember,
 } from '../types';
+
 import {
   initialOrganizations,
   initialTemplates,
-  initialCertificates,
-  initialAuditLogs,
-  initialMembers,
 } from '../data/initialData';
 
 const STORAGE_KEYS = {
@@ -20,7 +18,6 @@ const STORAGE_KEYS = {
   CERTIFICATES: 'hck_certificates_v1',
   AUDIT_LOGS: 'hck_audit_logs_v1',
   MEMBERS: 'hck_members_v1',
-  IS_DEMO: 'hck_is_demo_loaded_v1',
 };
 
 // Safe localStorage access helper
@@ -29,11 +26,20 @@ function safeGet<T>(key: string, fallback: T): T {
     if (typeof window === 'undefined' || !window.localStorage) {
       return fallback;
     }
+
     const item = window.localStorage.getItem(key);
-    if (!item) return fallback;
+
+    if (item === null) {
+      return fallback;
+    }
+
     return JSON.parse(item) as T;
-  } catch (e) {
-    console.warn(`Error reading localStorage key "${key}":`, e);
+  } catch (error) {
+    console.warn(
+      `Error reading localStorage key "${key}":`,
+      error
+    );
+
     return fallback;
   }
 }
@@ -43,57 +49,95 @@ function safeSet<T>(key: string, value: T): void {
     if (typeof window !== 'undefined' && window.localStorage) {
       window.localStorage.setItem(key, JSON.stringify(value));
     }
-  } catch (e) {
-    console.error(`Error writing to localStorage key "${key}":`, e);
+  } catch (error) {
+    console.error(
+      `Error writing localStorage key "${key}":`,
+      error
+    );
   }
 }
 
 /**
- * Storage Service for Real Local Browser Persistence
+ * Storage Service
+ * Persistent browser storage without demo dataset functionality.
  */
 export const StorageService = {
   // Organizations
   getOrganizations(): Organization[] {
-    const orgs = safeGet<Organization[]>(STORAGE_KEYS.ORGS, initialOrganizations);
-    const sanitized = orgs.filter(
-      (o) => o.id !== 'org-cybershield' && o.slug !== 'cybershield'
+    const orgs = safeGet<Organization[]>(
+      STORAGE_KEYS.ORGS,
+      initialOrganizations
     );
-    return sanitized.length > 0 ? sanitized : initialOrganizations;
+
+    const sanitized = orgs.filter(
+      (org) =>
+        org.id !== 'org-cybershield' &&
+        org.slug !== 'cybershield'
+    );
+
+    return sanitized.length > 0
+      ? sanitized
+      : initialOrganizations;
   },
 
   saveOrganizations(orgs: Organization[]): void {
     const sanitized = orgs.filter(
-      (o) => o.id !== 'org-cybershield' && o.slug !== 'cybershield'
+      (org) =>
+        org.id !== 'org-cybershield' &&
+        org.slug !== 'cybershield'
     );
+
     safeSet(STORAGE_KEYS.ORGS, sanitized);
   },
 
+  // Active Organization
   getActiveOrgId(): string {
-    const active = safeGet<string>(STORAGE_KEYS.ACTIVE_ORG, 'org-hacktivators');
+    const active = safeGet<string>(
+      STORAGE_KEYS.ACTIVE_ORG,
+      'org-hacktivators'
+    );
+
     if (active === 'org-cybershield') {
       return 'org-hacktivators';
     }
+
     return active;
   },
 
   setActiveOrgId(orgId: string): void {
-    if (orgId === 'org-cybershield') {
-      safeSet(STORAGE_KEYS.ACTIVE_ORG, 'org-hacktivators');
-    } else {
-      safeSet(STORAGE_KEYS.ACTIVE_ORG, orgId);
-    }
+    const safeOrgId =
+      orgId === 'org-cybershield'
+        ? 'org-hacktivators'
+        : orgId;
+
+    safeSet(STORAGE_KEYS.ACTIVE_ORG, safeOrgId);
   },
 
   // Templates
   getTemplates(): CertificateTemplate[] {
-    const templates = safeGet<CertificateTemplate[]>(STORAGE_KEYS.TEMPLATES, initialTemplates);
-    return templates.map((tpl) => ({
-      ...tpl,
-      elements: tpl.elements.map((el) => {
-        if (el.text && (el.text.includes('CYBERSHIELD') || el.text.includes('CyberShield') || el.text.includes('ACADEMY OF ADVANCED'))) {
-          return { ...el, text: 'HACKTIVATORS ADVANCED COMPUTING DIVISION' };
+    const templates = safeGet<CertificateTemplate[]>(
+      STORAGE_KEYS.TEMPLATES,
+      initialTemplates
+    );
+
+    return templates.map((template) => ({
+      ...template,
+      elements: template.elements.map((element) => {
+        if (
+          element.text &&
+          (
+            element.text.includes('CYBERSHIELD') ||
+            element.text.includes('CyberShield') ||
+            element.text.includes('ACADEMY OF ADVANCED')
+          )
+        ) {
+          return {
+            ...element,
+            text: 'HACKTIVATORS ADVANCED COMPUTING DIVISION',
+          };
         }
-        return el;
+
+        return element;
       }),
     }));
   },
@@ -102,30 +146,34 @@ export const StorageService = {
     safeSet(STORAGE_KEYS.TEMPLATES, templates);
   },
 
-  // Certificates: By default, start with real empty dataset unless user loaded demo data
+  // Certificates
+  // Returns an empty array when no certificates are stored.
   getCertificates(): Certificate[] {
-    const isDemo = this.isDemoDataLoaded();
-    const stored = safeGet<Certificate[] | null>(STORAGE_KEYS.CERTIFICATES, null);
-    const certs = stored !== null ? stored : (isDemo ? initialCertificates : []);
-    return certs.map((c) => ({
-      ...c,
-      recipientName: c.recipientName,
-      templateTitle: c.templateTitle?.replace(/CyberShield Academy/gi, 'Hacktivators Team'),
+    const certificates = safeGet<Certificate[]>(
+      STORAGE_KEYS.CERTIFICATES,
+      []
+    );
+
+    return certificates.map((certificate) => ({
+      ...certificate,
+      templateTitle: certificate.templateTitle?.replace(
+        /CyberShield Academy/gi,
+        'Hacktivators Team'
+      ),
     }));
   },
 
-  saveCertificates(certs: Certificate[]): void {
-    safeSet(STORAGE_KEYS.CERTIFICATES, certs);
+  saveCertificates(certificates: Certificate[]): void {
+    safeSet(STORAGE_KEYS.CERTIFICATES, certificates);
   },
 
   // Audit Logs
+  // Returns an empty array when no audit logs are stored.
   getAuditLogs(): AuditLogEntry[] {
-    const isDemo = this.isDemoDataLoaded();
-    const stored = safeGet<AuditLogEntry[] | null>(STORAGE_KEYS.AUDIT_LOGS, null);
-    if (stored !== null) {
-      return stored;
-    }
-    return isDemo ? initialAuditLogs : [];
+    return safeGet<AuditLogEntry[]>(
+      STORAGE_KEYS.AUDIT_LOGS,
+      []
+    );
   },
 
   saveAuditLogs(logs: AuditLogEntry[]): void {
@@ -134,16 +182,17 @@ export const StorageService = {
 
   // Members
   getMembers(): OrgMember[] {
-    const isDemo = this.isDemoDataLoaded();
-    const stored = safeGet<OrgMember[] | null>(STORAGE_KEYS.MEMBERS, null);
+    const stored = safeGet<OrgMember[] | null>(
+      STORAGE_KEYS.MEMBERS,
+      null
+    );
+
     if (stored !== null) {
       return stored;
     }
-    if (isDemo) {
-      return initialMembers;
-    }
-    // Clean initial administrator
-    return [
+
+    // Default platform administrator.
+    const defaultMembers: OrgMember[] = [
       {
         id: 'mem-admin-01',
         orgId: 'org-hacktivators',
@@ -154,6 +203,8 @@ export const StorageService = {
         joinedAt: new Date().toISOString(),
       },
     ];
+
+    return defaultMembers;
   },
 
   saveMembers(members: OrgMember[]): void {
@@ -161,65 +212,60 @@ export const StorageService = {
   },
 
   /**
-   * Permanently removes a single member from persistent storage.
-   * Reads the latest persisted list (not stale UI state), writes it back,
-   * and verifies the write. Throws if the member can't be removed.
+   * Permanently removes a member from persistent storage.
+   * Reads the latest persisted list and verifies the deletion.
    */
   deleteMember(memberId: string): OrgMember[] {
     if (typeof window === 'undefined' || !window.localStorage) {
       throw new Error('Persistent storage is unavailable.');
     }
+
     const current = this.getMembers();
-    if (!current.some((m) => m.id === memberId)) {
+
+    if (!current.some((member) => member.id === memberId)) {
       throw new Error('User not found.');
     }
-    const next = current.filter((m) => m.id !== memberId);
-    window.localStorage.setItem(STORAGE_KEYS.MEMBERS, JSON.stringify(next));
 
-    const persisted = safeGet<OrgMember[] | null>(STORAGE_KEYS.MEMBERS, null);
-    if (!persisted || persisted.some((m) => m.id === memberId)) {
+    const next = current.filter(
+      (member) => member.id !== memberId
+    );
+
+    window.localStorage.setItem(
+      STORAGE_KEYS.MEMBERS,
+      JSON.stringify(next)
+    );
+
+    const persisted = safeGet<OrgMember[] | null>(
+      STORAGE_KEYS.MEMBERS,
+      null
+    );
+
+    if (
+      persisted === null ||
+      persisted.some((member) => member.id === memberId)
+    ) {
       throw new Error('Deletion could not be persisted.');
     }
+
     return persisted;
   },
 
-  // Demo Data State
-  isDemoDataLoaded(): boolean {
-    return safeGet<boolean>(STORAGE_KEYS.IS_DEMO, false);
-  },
-
-  loadDemoDataset(): {
-    certificates: Certificate[];
-    auditLogs: AuditLogEntry[];
-    templates: CertificateTemplate[];
-    members: OrgMember[];
-  } {
-    safeSet(STORAGE_KEYS.IS_DEMO, true);
-    safeSet(STORAGE_KEYS.CERTIFICATES, initialCertificates);
-    safeSet(STORAGE_KEYS.AUDIT_LOGS, initialAuditLogs);
-    safeSet(STORAGE_KEYS.TEMPLATES, initialTemplates);
-    safeSet(STORAGE_KEYS.MEMBERS, initialMembers);
-
-    return {
-      certificates: initialCertificates,
-      auditLogs: initialAuditLogs,
-      templates: initialTemplates,
-      members: initialMembers,
-    };
-  },
-
+  /**
+   * Clears certificates and audit logs.
+   * Resets templates to the initial templates.
+   * Restores the default platform administrator.
+   */
   clearToProductionEmpty(): {
     certificates: Certificate[];
     auditLogs: AuditLogEntry[];
     templates: CertificateTemplate[];
     members: OrgMember[];
   } {
-    safeSet(STORAGE_KEYS.IS_DEMO, false);
-    safeSet(STORAGE_KEYS.CERTIFICATES, []);
-    safeSet(STORAGE_KEYS.AUDIT_LOGS, []);
-    safeSet(STORAGE_KEYS.TEMPLATES, initialTemplates);
+    const certificates: Certificate[] = [];
+    const auditLogs: AuditLogEntry[] = [];
+    const templates = initialTemplates;
 
-    const defaultMembers: OrgMember[] = [
+    const members: OrgMember[] = [
       {
         id: 'mem-admin-01',
         orgId: 'org-hacktivators',
@@ -230,13 +276,17 @@ export const StorageService = {
         joinedAt: new Date().toISOString(),
       },
     ];
-    safeSet(STORAGE_KEYS.MEMBERS, defaultMembers);
+
+    safeSet(STORAGE_KEYS.CERTIFICATES, certificates);
+    safeSet(STORAGE_KEYS.AUDIT_LOGS, auditLogs);
+    safeSet(STORAGE_KEYS.TEMPLATES, templates);
+    safeSet(STORAGE_KEYS.MEMBERS, members);
 
     return {
-      certificates: [],
-      auditLogs: [],
-      templates: initialTemplates,
-      members: defaultMembers,
+      certificates,
+      auditLogs,
+      templates,
+      members,
     };
   },
 };
