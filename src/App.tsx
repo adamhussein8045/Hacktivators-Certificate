@@ -122,7 +122,7 @@ export default function App() {
       id: `audit-${Date.now()}`,
       orgId: currentOrgId,
       actorName: 'Adam Hussein',
-      actorEmail: 'hacktivators5@gmail.com',
+      actorEmail: 'adamhussein0215@gmail.com',
       actorRole: currentRole,
       action: idx >= 0 ? 'TEMPLATE_UPDATED' : 'TEMPLATE_CREATED',
       targetId: savedTemplate.id,
