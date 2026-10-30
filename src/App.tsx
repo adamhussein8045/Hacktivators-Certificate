@@ -227,15 +227,6 @@ export default function App() {
     StorageService.saveAuditLogs(nextAudits);
   };
 
-  // Demo Dataset Controls
-  const handleLoadDemoData = () => {
-    const dataset = StorageService.loadDemoDataset();
-    setCertificates(dataset.certificates);
-    setAuditLogs(dataset.auditLogs);
-    setTemplates(dataset.templates);
-    setMembers(dataset.members);
-    setIsDemoActive(true);
-  };
 
   const handleClearData = () => {
     const dataset = StorageService.clearToProductionEmpty();
@@ -431,22 +422,21 @@ export default function App() {
           </div>
         )}
 
-        {/* Content Viewport */}
-        <main className="flex-1 bg-white overflow-y-auto">
-          {currentTab === 'dashboard' && (
-            <Dashboard
-              currentOrg={currentOrg}
-              lang={lang}
-              certificates={certificates}
-              templates={templates}
-              auditLogs={auditLogs}
-              isDemoActive={isDemoActive}
-              onNavigate={(tab) => setCurrentTab(tab as any)}
-              onSelectForVerification={handleOpenVerification}
-              onLoadDemoData={handleLoadDemoData}
-              onClearData={handleClearData}
-            />
-          )}
+
+  {/* Content Viewport */}
+  <main className="flex-1 bg-white overflow-y-auto">
+    {currentTab === 'dashboard' && (
+      <Dashboard
+      currentOrg={currentOrg}
+      lang={lang}
+      certificates={certificates}
+      templates={templates}
+      auditLogs={auditLogs}
+      onNavigate={(tab) => setCurrentTab(tab as any)}
+      onSelectForVerification={handleOpenVerification}
+      onClearData={handleClearData}
+    />
+  )}
 
           {currentTab === 'designer' && (
             <Designer
