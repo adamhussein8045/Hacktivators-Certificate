@@ -130,7 +130,7 @@ export const IssuanceHub: React.FC<IssuanceHubProps> = ({
       id: `audit-${Date.now()}`,
       orgId: currentOrgId,
       actorName: 'Adam Hussein',
-      actorEmail: 'hacktivators5@gmail.com',
+      actorEmail: 'adamhussein0215@gmail.com',
       actorRole: currentRole,
       action: 'CERTIFICATE_ISSUED',
       targetId: newCertId,
