@@ -152,7 +152,7 @@ ${inviteLink}
 
 يرجى الضغط على الرابط أعلاه لتفعيل صلاحياتكم والولوج المباشر إلى مساحة العمل التشغيلية لإصدار وتدقيق الاعتمادات الرقمية.
 
-في حال واجهتكم أي استفسارات أو احتجتم إلى تحقق أمني إضافي، يرجى التواصل مع إدارة العمليات: support@hacktivators.org
+في حال واجهتكم أي استفسارات أو احتجتم إلى تحقق أمني إضافي، يرجى التواصل مع إدارة العمليات: hacktivators5@gmail.com
 
 مع فائق التقدير،
 إدارة العمليات والتحقق الرقمي
@@ -177,7 +177,7 @@ ${inviteLink}
 
 Please click the secure link above to activate your administrative privileges, verify your institutional identity, and access your role-specific credential operations workspace.
 
-If you did not request or anticipate this authorization, please contact platform security administration immediately at support@hacktivators.org.
+If you did not request or anticipate this authorization, please contact platform security administration immediately at hacktivators5@gmail.com.
 
 Sincerely,
 Credential Directorate & Security Operations
