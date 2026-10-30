@@ -137,7 +137,7 @@ export const initialTemplates: CertificateTemplate[] = [
       {
         id: 'el-recipient',
         type: 'recipient',
-        text: 'Zaid Al-Harbi (زيد الحربي)',
+        text: 'Adam Hussein (ادم حسين)',
         x: 50,
         y: 47,
         fontSize: 32,
@@ -300,7 +300,7 @@ export const initialTemplates: CertificateTemplate[] = [
       {
         id: 'ct-recipient',
         type: 'recipient',
-        text: 'Lina Al-Hassan (لينا الحسن)',
+        text: 'Adam Hussein (ادم حسين)',
         x: 50,
         y: 45,
         fontSize: 28,
@@ -449,7 +449,7 @@ export const initialTemplates: CertificateTemplate[] = [
       {
         id: 'ag-recipient',
         type: 'recipient',
-        text: 'المهندس / فيصل بن عبد العزيز القحطاني',
+        text: 'ادم حسين',
         x: 50,
         y: 47,
         fontSize: 32,
