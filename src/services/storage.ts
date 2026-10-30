@@ -148,7 +148,7 @@ export const StorageService = {
         id: 'mem-admin-01',
         orgId: 'org-hacktivators',
         name: 'Adam Hussein',
-        email: 'hacktivators5@gmail.com',
+        email: 'adamhussein0215@gmail.com',
         role: 'platform_owner',
         status: 'active',
         joinedAt: new Date().toISOString(),
